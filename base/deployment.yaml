@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-gitops
+  labels:
+    app: hello-gitops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-gitops
+  template:
+    metadata:
+      labels:
+        app: hello-gitops
+    spec:
+      containers:
+        - name: hello-gitops
+          image: hashicorp/http-echo:1.0
+          args:
+            - "-text=hello from base"
+          ports:
+            - containerPort: 5678
