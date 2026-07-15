@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project" {
   description = "Project tag applied to all resources"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }
 
 variable "github_org" {
@@ -19,5 +19,5 @@ variable "github_org" {
 variable "github_repo" {
   description = "GitHub repository name"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }

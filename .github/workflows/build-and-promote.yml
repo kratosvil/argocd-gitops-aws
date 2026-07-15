@@ -15,7 +15,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  AWS_ROLE_ARN: arn:aws:iam::805778285334:role/argocd-gitops-lab-github-actions
+  AWS_ROLE_ARN: arn:aws:iam::805778285334:role/argocd-gitops-aws-github-actions
   ECR_REPOSITORY: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app
   KUSTOMIZE_VERSION: 5.4.3
 

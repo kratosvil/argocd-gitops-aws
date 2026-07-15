@@ -3,7 +3,7 @@ data "terraform_remote_state" "eks" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/eks/terraform.tfstate"
+    key    = "argocd-gitops-aws/eks/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -13,7 +13,7 @@ data "terraform_remote_state" "ecr" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/ecr/terraform.tfstate"
+    key    = "argocd-gitops-aws/ecr/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -60,7 +60,7 @@ data "aws_iam_policy_document" "github_actions_assume" {
     }
 
     # Scoped to this repo, any branch/ref - tighten to a specific ref
-    # (e.g. "repo:kratosvil/argocd-gitops-lab:ref:refs/heads/main") if the
+    # (e.g. "repo:kratosvil/argocd-gitops-aws:ref:refs/heads/main") if the
     # workflow ever needs a stricter trust boundary.
     condition {
       test     = "StringLike"

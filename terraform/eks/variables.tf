@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "cluster_name" {
   description = "EKS cluster name"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }
 
 variable "cluster_version" {
@@ -40,5 +40,5 @@ variable "node_max_size" {
 variable "project" {
   description = "Project tag applied to all resources"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }

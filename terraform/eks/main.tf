@@ -3,7 +3,7 @@ data "terraform_remote_state" "vpc" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/vpc/terraform.tfstate"
+    key    = "argocd-gitops-aws/vpc/terraform.tfstate"
     region = "us-east-1"
   }
 }

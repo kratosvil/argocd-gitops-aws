@@ -18,7 +18,7 @@ terraform {
 
   backend "s3" {
     bucket         = "kratosvil-tfstate-805778285334"
-    key            = "argocd-gitops-lab/alb-controller/terraform.tfstate"
+    key            = "argocd-gitops-aws/alb-controller/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "kratosvil-tflock"
     encrypt        = true
@@ -35,7 +35,7 @@ data "terraform_remote_state" "eks" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/eks/terraform.tfstate"
+    key    = "argocd-gitops-aws/eks/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -45,7 +45,7 @@ data "terraform_remote_state" "vpc" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/vpc/terraform.tfstate"
+    key    = "argocd-gitops-aws/vpc/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -55,7 +55,7 @@ data "terraform_remote_state" "iam" {
 
   config = {
     bucket = "kratosvil-tfstate-805778285334"
-    key    = "argocd-gitops-lab/iam/terraform.tfstate"
+    key    = "argocd-gitops-aws/iam/terraform.tfstate"
     region = "us-east-1"
   }
 }

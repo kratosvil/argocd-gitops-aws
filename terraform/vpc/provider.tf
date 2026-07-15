@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket         = "kratosvil-tfstate-805778285334"
-    key            = "argocd-gitops-lab/vpc/terraform.tfstate"
+    key            = "argocd-gitops-aws/vpc/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "kratosvil-tflock"
     encrypt        = true

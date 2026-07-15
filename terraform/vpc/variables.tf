@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "cluster_name" {
   description = "EKS cluster name — used in subnet discovery tags"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }
 
 variable "vpc_cidr" {
@@ -31,5 +31,5 @@ variable "availability_zones" {
 variable "project" {
   description = "Project tag applied to all resources"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }

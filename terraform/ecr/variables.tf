@@ -13,5 +13,5 @@ variable "repository_name" {
 variable "project" {
   description = "Project tag applied to all resources"
   type        = string
-  default     = "argocd-gitops-lab"
+  default     = "argocd-gitops-aws"
 }

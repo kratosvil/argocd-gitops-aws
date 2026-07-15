@@ -46,7 +46,7 @@ Three distinct roles, each scoped to only what it needs (least privilege, not on
 
 1. **ArgoCD → ECR**: IRSA role letting ArgoCD's service account pull from the private ECR repo.
 2. **AWS Load Balancer Controller**: IRSA role with the permissions needed to provision/manage ALBs and target groups from Ingress resources.
-3. **GitHub Actions → ECR**: **OIDC federation**, not static credentials. An IAM OIDC identity provider trusts `token.actions.githubusercontent.com`; the role's trust policy is scoped to `repo:kratosvil/argocd-gitops-lab:*` only — no other GitHub workflow anywhere can assume it. Permissions limited to ECR push actions (`ecr:GetAuthorizationToken`, `ecr:PutImage`, `ecr:*LayerUpload*`). No `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` is ever stored as a GitHub secret.
+3. **GitHub Actions → ECR**: **OIDC federation**, not static credentials. An IAM OIDC identity provider trusts `token.actions.githubusercontent.com`; the role's trust policy is scoped to `repo:kratosvil/argocd-gitops-aws:*` only — no other GitHub workflow anywhere can assume it. Permissions limited to ECR push actions (`ecr:GetAuthorizationToken`, `ecr:PutImage`, `ecr:*LayerUpload*`). No `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` is ever stored as a GitHub secret.
 
 ## CI/CD pipeline (GitHub Actions)
 
