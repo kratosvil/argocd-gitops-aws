@@ -1,23 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-gitops
+  name: kratosvil-replica-app
   labels:
-    app: hello-gitops
+    app: kratosvil-replica-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-gitops
+      app: kratosvil-replica-app
   template:
     metadata:
       labels:
-        app: hello-gitops
+        app: kratosvil-replica-app
     spec:
       containers:
-        - name: hello-gitops
-          image: hashicorp/http-echo:1.0
-          args:
-            - "-text=hello from base"
+        - name: kratosvil-replica-app
+          image: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app:latest
           ports:
-            - containerPort: 5678
+            - containerPort: 80
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name

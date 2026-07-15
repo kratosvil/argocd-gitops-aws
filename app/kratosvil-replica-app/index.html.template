@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kratosvil Replica</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #101418;
+      --card: #171d23;
+      --border: #2a333b;
+      --text: #eef3f5;
+      --dim: #8fa1a8;
+      --accent: #5fc4b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    .card {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 12px;
+      padding: 40px 48px;
+      text-align: center;
+    }
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0;
+      word-break: break-all;
+    }
+    .pod {
+      color: var(--accent);
+    }
+    .hint {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">kratosvil-replica-app</div>
+    <h1>Kratosvil Replica <span class="pod">${POD_NAME}</span></h1>
+    <div class="hint">refresh to see the load balancer hit a different pod</div>
+  </div>
+</body>
+</html>

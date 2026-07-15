@@ -3,13 +3,5 @@ kind: Kustomization
 resources:
   - ../../base
 replicas:
-  - name: hello-gitops
-    count: 1
-patches:
-  - target:
-      kind: Deployment
-      name: hello-gitops
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/args/0
-        value: "-text=hello from DEV v2 - promoted via git"
+  - name: kratosvil-replica-app
+    count: 2

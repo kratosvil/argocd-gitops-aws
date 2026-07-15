@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: hello-gitops
+  name: kratosvil-replica-app
 spec:
   selector:
-    app: hello-gitops
+    app: kratosvil-replica-app
   ports:
     - port: 80
-      targetPort: 5678
+      targetPort: 80
