@@ -9,4 +9,4 @@ replicas:
 images:
 - name: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app
   newName: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app
-  newTag: 4cd75ad308a4
+  newTag: f06a8bb69807
