@@ -1,12 +1,12 @@
-# ArgoCD GitOps Lab
+# ArgoCD GitOps Pipeline on AWS EKS
 
-Self-contained lab demonstrating GitOps deployment to Kubernetes with ArgoCD: declarative environment promotion, automated sync, self-healing against manual drift, and a real CI pipeline in front of it all.
+A GitOps deployment pipeline for Kubernetes on Amazon EKS: ArgoCD handles declarative environment promotion, automated sync, and self-healing against manual drift, fronted by a GitHub Actions CI pipeline that builds, pushes to ECR, and promotes automatically — authenticated via OIDC, no static AWS credentials, no manual `kubectl apply`.
 
-**Status:** v1 (local, minikube) and v2 (real AWS: EKS + ECR + GitHub Actions CI/CD + ALB) both complete. Full v2 design rationale and build log in [docs/architecture-v2.md](docs/architecture-v2.md).
+**Status:** complete. All infrastructure is provisioned with Terraform across 6 independent stacks (VPC, EKS, ECR, IAM, ArgoCD, ALB Controller), verified live on AWS, then torn down — full design rationale and build log in [docs/architecture-v2.md](docs/architecture-v2.md). An earlier local-only version (minikube) is also documented for reference.
 
-## Why this lab
+## Why this project
 
-I have production experience with EKS (Terraform-provisioned clusters, Blue/Green deployments, IRSA, HPA — see [aws-eks-forge](https://github.com/kratosvil/aws-eks-forge)) but no hands-on GitOps tooling until now. This lab proves the ArgoCD/GitOps mechanics specifically — declarative sync, drift correction, environment promotion — first cheaply on minikube (v1), then for real on AWS with a full CI/CD pipeline in front of it (v2).
+I have production experience with EKS (Terraform-provisioned clusters, Blue/Green deployments, IRSA, HPA — see [aws-eks-forge](https://github.com/kratosvil/aws-eks-forge)) but no hands-on GitOps tooling until now. This project proves the ArgoCD/GitOps mechanics specifically — declarative sync, drift correction, environment promotion — first cheaply on minikube (v1), then for real on AWS with a full CI/CD pipeline in front of it (v2).
 
 ## Architecture (v2, current)
 
