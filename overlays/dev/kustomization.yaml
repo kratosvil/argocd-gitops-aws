@@ -4,7 +4,7 @@ resources:
 - ../../base
 - ingress.yaml
 replicas:
-- count: 2
+- count: 3
   name: kratosvil-replica-app
 images:
 - name: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app
