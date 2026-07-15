@@ -2,7 +2,7 @@
 
 Small, self-contained lab that demonstrates GitOps deployment to Kubernetes with ArgoCD: declarative environment promotion via Kustomize overlays, automated sync, and self-healing against manual drift.
 
-**Status:** demos executed — see the process overview below.
+**Status:** v1 (local, minikube) demos executed — see the process overview below. **v2 (real AWS: EKS, ECR, GitHub Actions CI/CD, ALB) is designed and planned, not yet built** — see [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ## Why this lab
 
