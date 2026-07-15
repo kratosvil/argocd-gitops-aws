@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kratosvil-replica-app
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # Shared with argocd/ingress.yaml so the AWS Load Balancer Controller
+    # merges both into a single ALB instead of provisioning one each.
+    alb.ingress.kubernetes.io/group.name: kratosvil-replica-app
+    alb.ingress.kubernetes.io/group.order: "20"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kratosvil-replica-app
+                port:
+                  number: 80
