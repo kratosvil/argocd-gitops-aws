@@ -1,0 +1,67 @@
+name: Build and promote (dev)
+
+# Only app source changes trigger a build. This is the loop guard: the job
+# below commits back to overlays/dev/kustomization.yaml, which lives outside
+# this path, so that commit never re-triggers this workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/kratosvil-replica-app/**"
+
+permissions:
+  id-token: write   # required to assume the AWS role via OIDC
+  contents: write    # required to commit the image tag bump back to the repo
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::805778285334:role/argocd-gitops-lab-github-actions
+  ECR_REPOSITORY: 805778285334.dkr.ecr.us-east-1.amazonaws.com/kratosvil-replica-app
+  KUSTOMIZE_VERSION: 5.4.3
+
+jobs:
+  build-push-promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # No static AWS credentials anywhere: this exchanges the workflow's
+      # short-lived OIDC token for temporary AWS credentials, scoped to this
+      # repo by the role's trust policy (see terraform/iam/main.tf).
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        working-directory: app/kratosvil-replica-app
+        run: |
+          tag="${GITHUB_SHA::12}"
+          docker build -t "${ECR_REPOSITORY}:${tag}" .
+          docker push "${ECR_REPOSITORY}:${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Install kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Bump dev image tag
+        working-directory: overlays/dev
+        run: |
+          kustomize edit set image "${ECR_REPOSITORY}=${ECR_REPOSITORY}:${{ steps.build.outputs.tag }}"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add overlays/dev/kustomization.yaml
+          git commit -m "ci: promote dev to ${{ steps.build.outputs.tag }}"
+          git push
