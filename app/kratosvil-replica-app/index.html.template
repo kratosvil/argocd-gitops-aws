@@ -59,6 +59,7 @@
     <div class="eyebrow">kratosvil-replica-app</div>
     <h1>Kratosvil Replica <span class="pod">${POD_NAME}</span></h1>
     <div class="hint">refresh to see the load balancer hit a different pod</div>
+    <div class="hint">this build was promoted automatically by CI</div>
   </div>
 </body>
 </html>
