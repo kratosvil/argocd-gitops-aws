@@ -15,23 +15,20 @@ The fusion changes what the agent *is*: instead of an agent that patches a resou
 
 ## Roadmap
 
-Build order. Each module ships with its own verification step and gets folded into the architecture doc once done — nothing below is claimed as built until it's checked off.
+Build order for v1 — the minimal slice that demonstrates the real differentiator (reason → remediate via Git → self-guard) without overrunning scope. Each module ships with its own verification step and gets folded into the architecture doc once done — nothing below is claimed as built until it's checked off.
 
 | # | Module | Status |
 |---|--------|--------|
 | — | Prerequisite: redeploy EKS + ArgoCD (base infra below) | ⬜ Next |
 | 0 | Observability (Prometheus + Grafana + Alertmanager) | ⬜ Pending |
-| 1 | Core: `argocd_rollback_via_git` — remediation via Git commit, gated by dry-run/OPA + Semgrep/Trivy/Gitleaks | ⬜ Pending |
+| 1 | Core: `argocd_rollback_via_git` — remediation via Git commit, gated by dry-run/OPA + Semgrep/Trivy/Gitleaks; live manifests move to a separate private repo | ⬜ Pending |
 | 2 | IAM separation: reasoning role is read-only; only the GitOps pipeline writes | ⬜ Pending |
-| 3 | Three-state decision gate (auto-execute / auto-reject / escalate) | ⬜ Pending |
-| 4 | Eradication phase — auto-generated guardrail policy (OPA/Gatekeeper) per resolved incident | ⬜ Pending |
-| 5 | ChatOps (Slack) approvals | ⬜ Pending |
-| 6 | FinOps estimate in the reasoning step | ⬜ Pending |
-| 7 | Multi-agent: planner → critic → executor | ⬜ Pending |
-| 8 | Trust dial — explicit progressive-autonomy policy | ⬜ Pending |
-| 9 | Quantified benchmark (N ≥ 15-20 simulated incidents, success/failure rate, MTTR) | ⬜ Pending |
-| 10 | Live dashboard | ⬜ Pending |
+| 3 | Decision gate + trust dial (fused) — three-state routing (auto-execute / auto-reject / escalate) driven by an explicit risk-classification policy | ⬜ Pending |
+| 4 | Eradication phase — auto-generated guardrail policy (OPA/Gatekeeper) per resolved incident, plus loop-closure verification | ⬜ Pending |
+| 9 | Illustrative scenarios (N ≥ 15-20 simulated incidents, success/failure rate, MTTR) — not called a "benchmark" to avoid implying comparability with market figures from real telemetry | ⬜ Pending |
 | 11 | Demo video | ⬜ Pending |
+
+**Deferred to v2** (commodity/UX, not the core differentiator — revisit once v1 ships): ChatOps (Slack) approvals, FinOps cost estimate in the reasoning step, multi-agent planner→critic→executor, live dashboard.
 
 ## Base: ArgoCD GitOps pipeline (complete)
 
