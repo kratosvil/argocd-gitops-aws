@@ -1,8 +1,8 @@
 name: Build and promote (dev)
 
-# Only app source changes trigger a build. This is the loop guard: the job
-# below commits back to overlays/dev/kustomization.yaml, which lives outside
-# this path, so that commit never re-triggers this workflow.
+# Only app source changes trigger a build. The promotion commit goes to a
+# separate private repo (saga-gitops-manifests), so it can never re-trigger
+# this workflow — no loop guard needed anymore.
 on:
   push:
     branches: [main]
@@ -11,7 +11,7 @@ on:
 
 permissions:
   id-token: write   # required to assume the AWS role via OIDC
-  contents: write    # required to commit the image tag bump back to the repo
+  contents: read     # this repo is read-only for this job now
 
 env:
   AWS_REGION: us-east-1
@@ -23,7 +23,7 @@ jobs:
   build-push-promote:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout app source
         uses: actions/checkout@v4
 
       # No static AWS credentials anywhere: this exchanges the workflow's
@@ -47,6 +47,16 @@ jobs:
           docker push "${ECR_REPOSITORY}:${tag}"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
+      # Manifests live in a separate private repo (SAGA Módulo 1: keeps live
+      # operational state — account IDs, ARNs — out of this public repo).
+      # Fine-grained PAT scoped only to that repo, Contents+PRs Read&Write.
+      - name: Checkout manifests repo
+        uses: actions/checkout@v4
+        with:
+          repository: kratosvil/saga-gitops-manifests
+          token: ${{ secrets.SAGA_MANIFESTS_TOKEN }}
+          path: manifests
+
       - name: Install kustomize
         run: |
           curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
@@ -54,11 +64,12 @@ jobs:
           sudo mv kustomize /usr/local/bin/
 
       - name: Bump dev image tag
-        working-directory: overlays/dev
+        working-directory: manifests/overlays/dev
         run: |
           kustomize edit set image "${ECR_REPOSITORY}=${ECR_REPOSITORY}:${{ steps.build.outputs.tag }}"
 
       - name: Commit and push
+        working-directory: manifests
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
