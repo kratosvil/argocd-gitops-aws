@@ -18,6 +18,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: kube-prometheus-stack-alertmanager
+                name: saga-observability-stack-k-alertmanager
                 port:
                   number: 9093

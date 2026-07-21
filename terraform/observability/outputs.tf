@@ -1,7 +1,3 @@
-output "namespace" {
-  value = kubernetes_namespace.observability.metadata[0].name
-}
-
 output "alertmanager_webhook_url" {
   value = "${trimsuffix(aws_apigatewayv2_stage.default.invoke_url, "/")}/alertmanager-webhook"
 }
