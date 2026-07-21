@@ -19,8 +19,8 @@ Build order for v1 — the minimal slice that demonstrates the real differentiat
 
 | # | Module | Status |
 |---|--------|--------|
-| — | Prerequisite: redeploy EKS + ArgoCD (base infra below) | ⬜ Next |
-| 0 | Observability (Prometheus + Grafana + Alertmanager) | ⬜ Pending |
+| — | Prerequisite: redeploy EKS + ArgoCD (base infra below) | ✅ Done |
+| 0 | Observability (Prometheus + Grafana + Alertmanager) | ✅ Done |
 | 1 | Core: `argocd_rollback_via_git` — remediation via Git commit, gated by dry-run/OPA + Semgrep/Trivy/Gitleaks; live manifests move to a separate private repo | ⬜ Pending |
 | 2 | IAM separation: reasoning role is read-only; only the GitOps pipeline writes | ⬜ Pending |
 | 3 | Decision gate + trust dial (fused) — three-state routing (auto-execute / auto-reject / escalate) driven by an explicit risk-classification policy | ⬜ Pending |
