@@ -56,7 +56,29 @@ resource "helm_release" "kube_prometheus_stack" {
   # es un lab de demo, no un entorno con volumen real de alertas.
   values = [
     yamlencode({
+      # Subpaths en el ALB compartido (mismo que /argocd) — cada servicio
+      # necesita saber su propio prefijo para que los links/assets internos
+      # no se rompan quedando expuesto detrás de un path en vez de un host.
+      grafana = {
+        "grafana.ini" = {
+          server = {
+            domain              = var.alb_dns_name
+            root_url            = "%(protocol)s://%(domain)s/grafana/"
+            serve_from_sub_path = true
+          }
+        }
+      }
+      prometheus = {
+        prometheusSpec = {
+          routePrefix = "/prometheus"
+          externalUrl = "http://${var.alb_dns_name}/prometheus"
+        }
+      }
       alertmanager = {
+        alertmanagerSpec = {
+          routePrefix = "/alertmanager"
+          externalUrl = "http://${var.alb_dns_name}/alertmanager"
+        }
         config = {
           global = {}
           route = {

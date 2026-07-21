@@ -25,3 +25,13 @@ variable "mcp_server_url" {
   type        = string
   default     = ""
 }
+
+# El ALB lo crea el AWS Load Balancer Controller a partir de los recursos
+# Ingress (no es un recurso de Terraform) — su DNS name puede cambiar si el
+# cluster se recrea. Actualizar este valor con `kubectl get ingress -A` tras
+# el Prerrequisito si difiere.
+variable "alb_dns_name" {
+  description = "DNS name del ALB compartido (mismo que usan argocd-server y kratosvil-replica-app)"
+  type        = string
+  default     = "k8s-kratosvilreplicaa-37d9f8e1dd-139128285.us-east-1.elb.amazonaws.com"
+}
