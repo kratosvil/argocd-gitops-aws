@@ -43,6 +43,16 @@ spec:
           persistence:
             enabled: false
           defaultDashboardsEnabled: true
+          # Sin esto, el chart genera un admin-password random en CADA
+          # render — como ArgoCD re-renderiza en cada sync/self-heal, eso
+          # cambia el checksum del Secret en cada ciclo y el Deployment
+          # queda perpetuamente OutOfSync peleando contra sí mismo.
+          # El secret se crea a mano (kubectl), fuera de git — mismo
+          # criterio que argocd-initial-admin-secret, nunca en el repo.
+          admin:
+            existingSecret: grafana-admin-credentials
+            userKey: admin-user
+            passwordKey: admin-password
           grafana.ini:
             server:
               domain: k8s-kratosvilreplicaa-37d9f8e1dd-139128285.us-east-1.elb.amazonaws.com
