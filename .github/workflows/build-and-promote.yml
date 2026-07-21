@@ -27,6 +27,16 @@ jobs:
       - name: Checkout app source
         uses: actions/checkout@v4
 
+      - name: DEBUG - raw sts call with full error
+        run: |
+          TOKEN=$(curl -sH "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq .
+          aws sts assume-role-with-web-identity \
+            --role-arn "${{ env.AWS_ROLE_ARN }}" \
+            --role-session-name debug-session \
+            --web-identity-token "$TOKEN" \
+            --region "${{ env.AWS_REGION }}" || true
+
       # No static AWS credentials anywhere: this exchanges the workflow's
       # short-lived OIDC token for temporary AWS credentials, scoped to this
       # repo by the role's trust policy (see terraform/iam/main.tf).
