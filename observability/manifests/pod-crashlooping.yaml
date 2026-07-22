@@ -4,7 +4,7 @@ metadata:
   name: saga-pod-crashlooping
   namespace: observability
   labels:
-    release: kube-prometheus-stack
+    release: saga-observability-stack
 spec:
   groups:
     - name: saga.pod-crashlooping
