@@ -4,7 +4,7 @@ metadata:
   name: saga-hpa-at-limit
   namespace: observability
   labels:
-    release: kube-prometheus-stack
+    release: saga-observability-stack
 spec:
   groups:
     - name: saga.hpa-at-limit
