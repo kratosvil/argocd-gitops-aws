@@ -70,11 +70,19 @@ spec:
               group_wait: 10s
               group_interval: 30s
               repeat_interval: 1h
-              # Limpia la sub-ruta por defecto del chart que apunta a un
-              # receiver "null" — como reemplazamos la lista de receivers
-              # completa, esa sub-ruta queda huérfana si no se limpia.
-              routes: []
+              routes:
+                # Watchdog es el heartbeat interno de Prometheus (siempre
+                # firing, re-notifica cada repeat_interval) -- no es un
+                # incidente real, pero antes de este fix pasaba por el mismo
+                # webhook que todo, disparando una llamada real a Bedrock
+                # cada hora sin necesidad (~$0.005 c/u, hallazgo real
+                # 2026-08-13). Va a un receiver vacio, se descarta acá, nunca
+                # llega al dispatcher.
+                - receiver: "null"
+                  matchers:
+                    - alertname = "Watchdog"
             receivers:
+              - name: "null"
               - name: webhook-dispatcher
                 webhook_configs:
                   - url: "https://w6d48hmgji.execute-api.us-east-1.amazonaws.com/alertmanager-webhook"
