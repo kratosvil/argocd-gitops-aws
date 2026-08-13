@@ -1,11 +1,18 @@
-FROM nginx:alpine
+FROM python:3.12-slim
 
-# Reuse nginx's built-in envsubst-on-templates entrypoint (normally used for
-# config templates) to render the HTML instead, pointing its output at the
-# html root. POD_NAME comes from the Kubernetes Downward API at runtime —
-# see base/deployment.yaml.
-ENV NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/html-templates \
-    NGINX_ENVSUBST_TEMPLATE_SUFFIX=.template \
-    NGINX_ENVSUBST_OUTPUT_DIR=/usr/share/nginx/html
+# Usuario no-root fijo (no viene baked-in como en nginx:alpine) -- mismo
+# runAsUser se fija en base/deployment.yaml.
+RUN useradd -u 1000 -m appuser
+WORKDIR /app
 
-COPY index.html.template /etc/nginx/html-templates/index.html.template
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+USER appuser
+EXPOSE 8080
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
