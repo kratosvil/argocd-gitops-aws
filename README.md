@@ -2,33 +2,37 @@
 
 An agent that reasons about real incidents on a Kubernetes/AWS cluster and remediates them by committing to Git — not just diagnosing them. The fix is validated by policy gates (dry-run + OPA + SAST/IaC/secrets scanning) before ArgoCD ever syncs it, and every resolved incident leaves behind a guardrail that prevents the same failure from recurring.
 
-**Status: in progress.** This repo currently holds the GitOps base infrastructure (EKS + ArgoCD + CI/CD) described below, complete and verified live on AWS. SAGA is being built on top of it, module by module, per the roadmap below. No SAGA-specific code exists yet — the prerequisite is redeploying the base infrastructure.
+**Status: core loop verified live, including Bedrock reasoning in production (not simulated).** This repo holds the GitOps base infrastructure (EKS + ArgoCD + CI/CD) — complete below. SAGA's reasoning/execution half lives in [`sao-platform`](https://github.com/kratosvil/sao-platform) (private); the live GitOps manifests it commits to live in [`saga-gitops-manifests`](https://github.com/kratosvil/saga-gitops-manifests) (private). What remains: recording the demo video — everything it shows has already run against real infrastructure.
 
 ## Why this project
 
 SAGA fuses two things built separately:
 
-- An incident-reasoning agent (Bedrock-based: alarm → root-cause reasoning → proposed fix → human-in-the-loop approval) that until now only executed fixes directly via AWS APIs.
-- This repo's GitOps pipeline (ArgoCD + EKS + CI/CD), which until now only handled application deployments, not incident response.
+- An incident-reasoning agent (Bedrock-based: alarm → root-cause reasoning → proposed fix → human-in-the-loop approval) that used to execute fixes directly via AWS APIs.
+- This repo's GitOps pipeline (ArgoCD + EKS + CI/CD), which used to only handle application deployments, not incident response.
 
-The fusion changes what the agent *is*: instead of an agent that patches a resource once, it becomes an agent that manages the lifecycle of a Kubernetes platform through the same auditable, git-native path a human operator would use. Every action is a commit, every commit is reviewable, and the reasoning role never has direct write access to the cluster — only the GitOps pipeline does.
+The fusion changes what the agent *is*: instead of an agent that patches a resource once, it manages the lifecycle of a Kubernetes platform through the same auditable, git-native path a human operator would use. Every action is a Pull Request, every PR is gated by CI, and the reasoning role never has direct write access to the cluster or to AWS — only the GitOps pipeline does, and only after policy checks pass.
 
 ## Roadmap
 
-Build order for v1 — the minimal slice that demonstrates the real differentiator (reason → remediate via Git → self-guard) without overrunning scope. Each module ships with its own verification step and gets folded into the architecture doc once done — nothing below is claimed as built until it's checked off.
+Build order for v1 — the minimal slice that demonstrates the real differentiator (reason → remediate via Git → self-guard) without overrunning scope.
 
 | # | Module | Status |
 |---|--------|--------|
-| — | Prerequisite: redeploy EKS + ArgoCD (base infra below) | ✅ Done |
-| 0 | Observability (Prometheus + Grafana + Alertmanager) | ✅ Done |
-| 1 | Core: `argocd_rollback_via_git` — remediation via Git commit, gated by dry-run/OPA + Trivy/Gitleaks; live manifests moved to [`saga-gitops-manifests`](https://github.com/kratosvil/saga-gitops-manifests) (private) | ✅ Done |
-| 2 | IAM separation: reasoning role is read-only; only the GitOps pipeline writes | ⬜ Pending |
-| 3 | Decision gate + trust dial (fused) — three-state routing (auto-execute / auto-reject / escalate) driven by an explicit risk-classification policy | ⬜ Pending |
-| 4 | Eradication phase — auto-generated guardrail policy (OPA/Gatekeeper) per resolved incident, plus loop-closure verification | ⬜ Pending |
-| 9 | Illustrative scenarios (N ≥ 15-20 simulated incidents, success/failure rate, MTTR) — not called a "benchmark" to avoid implying comparability with market figures from real telemetry | ⬜ Pending |
-| 11 | Demo video | ⬜ Pending |
+| — | Prerequisite: EKS + ArgoCD (base infra below) | ✅ Done |
+| 0 | Observability (Prometheus + Grafana + Alertmanager, via an ArgoCD Application — self-healing) | ✅ Done |
+| 1 | Core: `argocd_rollback_via_git` — remediation via a Pull Request, gated by dry-run/OPA + Trivy/Gitleaks; live manifests in [`saga-gitops-manifests`](https://github.com/kratosvil/saga-gitops-manifests) (private) | ✅ Done |
+| 2 | IAM separation: reasoning role is read-only, verified with a real negative test (`AccessDeniedException`) | ✅ Done |
+| 3 | Decision gate + trust dial (fused) — `decision_state` (`auto_execute` / `escalate`) decided deterministically by code from the action's parameters, never by the model's self-reported risk | ✅ Done |
+| 4 | Eradication phase — auto-generated guardrail policy (OPA) per resolved incident (never auto-merges), plus loop-closure verification against real Prometheus data | ✅ Done |
+| 9 | Illustrative scenarios — 15/15 real incidents resolved and confirmed (not simulated), MTTR ~8.4 min. Not called a "benchmark" — same incident type repeated, no inflated variety claimed | ✅ Done |
+| 10 | Review console (`/hitl/pending`, `/hitl/review/{token}`) — approve as-is or adjust a parameter before approving, no external tool/license needed | ✅ Done |
+| 11 | Bedrock reasoning live against a real incident, PR auto-merged, cluster recovered — verified end to end. Demo video | ✅ core proven — 🎥 video pending |
+| 12 | Cost visibility — real per-decision cost captured from Bedrock's own token usage, shown in the console | ✅ minimal slice done — full budget-gate/dedup still backlog |
 
-**Deferred to v2** (commodity/UX, not the core differentiator — revisit once v1 ships): ChatOps (Slack) approvals, FinOps cost estimate in the reasoning step, multi-agent planner→critic→executor, live dashboard.
+**Deferred, revisit if time allows:** ChatOps (Slack) approvals (superseded by the review console — no external tool needed), FinOps cost estimate *of the fix itself* (distinct from Module 12's agent-cost tracking), multi-agent planner→critic→executor.
+
+Full module-by-module log, bugs found and fixed, and the live architecture map: `estado.md` / `infra-map.md` (private, `contexts-repo`).
 
 ## Base: ArgoCD GitOps pipeline (complete)
 
@@ -42,9 +46,16 @@ I have production experience with EKS (Terraform-provisioned clusters, Blue/Gree
 
 ```
 GitHub (this repo, public)
-  app/kratosvil-replica-app/  → nginx:alpine, renders its own pod identity
-                                 via the Kubernetes Downward API
+  app/kratosvil-replica-app/  → FastAPI microservice (not a static page): a
+                                 status page, /health (used by real K8s probes),
+                                 /metrics in Prometheus format — real request/
+                                 uptime metrics, not just infra-level ones.
+                                 Runs as a fixed non-root UID, port 8080
+                                 (privileged ports aren't bindable non-root).
   base/ + overlays/{dev,prod}/ → Kustomize, dev=3 replicas / prod=3 replicas
+                                 (live in saga-gitops-manifests, private —
+                                 kept separate so live account IDs/ARNs
+                                 never land in this public repo)
   .github/workflows/           → build image → push ECR → bump manifest tag → commit
 
 AWS (Terraform, 6 independent stacks under terraform/)
@@ -56,13 +67,16 @@ AWS (Terraform, 6 independent stacks under terraform/)
   alb-controller → AWS Load Balancer Controller
 
 Runtime (inside EKS)
-  ArgoCD watches `main`, 2 Applications:
+  ArgoCD watches saga-gitops-manifests (private) + this repo, 4 Applications:
     kratosvil-replica-app-dev  (automated: prune + selfHeal)
     kratosvil-replica-app-prod (manual sync)
-  1 shared ALB, path-based routing: /argocd → ArgoCD UI, / → the app
+    saga-observability          (PrometheusRule CRs, self-healing)
+    saga-observability-stack    (kube-prometheus-stack Helm chart, self-healing)
+  1 shared ALB, path-based routing:
+    /argocd, /grafana, /prometheus, /alertmanager, / (the app)
 ```
 
-GitHub Actions never touches the cluster — it only reaches ECR and this repo (via OIDC, no static AWS credentials). ArgoCD is the only component with real cluster access.
+GitHub Actions never touches the cluster — it only reaches ECR and this repo (via OIDC, no static AWS credentials). ArgoCD is the only component with real cluster access — and for incident remediation, even ArgoCD only ever applies what a human-reviewed, CI-gated Pull Request already merged; SAGA's reasoning agent never touches the cluster directly either.
 
 ### Repo structure
 
@@ -82,7 +96,7 @@ GitHub Actions never touches the cluster — it only reaches ECR and this repo (
     └── images/                  # process diagrams (v1 + v2)
 ```
 
-New folders (`agent/`, `observability/`, `policies/`, etc.) will appear as SAGA modules land, following the roadmap order above.
+SAGA's reasoning/execution code (the agent, the GitOps-write action, the decision gate, guardrail generation, the review console) lives in [`sao-platform`](https://github.com/kratosvil/sao-platform) (private), not in this repo — this repo stays the public, portfolio-facing base (app, IaC, CI). The `observability/manifests/` folder here holds the Prometheus alert rules that trigger SAGA's incident-detection path; the Helm chart itself is deployed via an ArgoCD Application, not Terraform (see architecture above).
 
 ### Setup (v2, AWS) — this is the SAGA prerequisite
 
