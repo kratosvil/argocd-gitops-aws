@@ -38,7 +38,7 @@ spec:
           prometheusSpec:
             retention: 6h
             routePrefix: /prometheus
-            externalUrl: http://k8s-kratosvilreplicaa-37d9f8e1dd-139128285.us-east-1.elb.amazonaws.com/prometheus
+            externalUrl: http://k8s-kratosvilreplicaa-37d9f8e1dd-428361218.us-east-1.elb.amazonaws.com/prometheus
         grafana:
           persistence:
             enabled: false
@@ -55,13 +55,13 @@ spec:
             passwordKey: admin-password
           grafana.ini:
             server:
-              domain: k8s-kratosvilreplicaa-37d9f8e1dd-139128285.us-east-1.elb.amazonaws.com
+              domain: k8s-kratosvilreplicaa-37d9f8e1dd-428361218.us-east-1.elb.amazonaws.com
               root_url: "%(protocol)s://%(domain)s/grafana/"
               serve_from_sub_path: true
         alertmanager:
           alertmanagerSpec:
             routePrefix: /alertmanager
-            externalUrl: http://k8s-kratosvilreplicaa-37d9f8e1dd-139128285.us-east-1.elb.amazonaws.com/alertmanager
+            externalUrl: http://k8s-kratosvilreplicaa-37d9f8e1dd-428361218.us-east-1.elb.amazonaws.com/alertmanager
           config:
             global: {}
             route:
@@ -77,7 +77,7 @@ spec:
             receivers:
               - name: webhook-dispatcher
                 webhook_configs:
-                  - url: "https://jywh3wqfic.execute-api.us-east-1.amazonaws.com/alertmanager-webhook"
+                  - url: "https://hfm0kk4roj.execute-api.us-east-1.amazonaws.com/alertmanager-webhook"
                     send_resolved: true
   destination:
     server: https://kubernetes.default.svc
