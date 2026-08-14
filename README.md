@@ -2,7 +2,9 @@
 
 An agent that reasons about real incidents on a Kubernetes/AWS cluster and remediates them by committing to Git — not just diagnosing them. The fix is validated by policy gates (dry-run + OPA + SAST/IaC/secrets scanning) before ArgoCD ever syncs it, and every resolved incident leaves behind a guardrail that prevents the same failure from recurring.
 
-**Status: core loop verified live, including Bedrock reasoning in production (not simulated).** This repo holds the GitOps base infrastructure (EKS + ArgoCD + CI/CD) — complete below. SAGA's reasoning/execution half lives in [`sao-platform`](https://github.com/kratosvil/sao-platform) (private); the live GitOps manifests it commits to live in [`saga-gitops-manifests`](https://github.com/kratosvil/saga-gitops-manifests) (private). What remains: recording the demo video — everything it shows has already run against real infrastructure.
+**Status: core loop verified live, including Bedrock reasoning in production (not simulated) — demo video recorded 2026-08-14, real incident, real cost, real merge.** This repo holds the GitOps base infrastructure (EKS + ArgoCD + CI/CD) — complete below. SAGA's reasoning/execution half lives in [`sao-platform`](https://github.com/kratosvil/sao-platform) (private); the live GitOps manifests it commits to live in [`saga-gitops-manifests`](https://github.com/kratosvil/saga-gitops-manifests) (private).
+
+**Numbers from real runs, not projections:** 15/15 illustrative incidents resolved (Módulo 9) · MTTR ~8.4 min · a dedicated fault-injection suite with 3 distinct real root causes (process crash, liveness-probe timeout, OOM kill) found the fix loop actually merges in **under a minute** when it qualifies for auto-execute · real Bedrock cost per decision: **under $0.01**.
 
 ## Why this project
 
@@ -27,10 +29,20 @@ Build order for v1 — the minimal slice that demonstrates the real differentiat
 | 4 | Eradication phase — auto-generated guardrail policy (OPA) per resolved incident (never auto-merges), plus loop-closure verification against real Prometheus data | ✅ Done |
 | 9 | Illustrative scenarios — 15/15 real incidents resolved and confirmed (not simulated), MTTR ~8.4 min. Not called a "benchmark" — same incident type repeated, no inflated variety claimed | ✅ Done |
 | 10 | Review console (`/hitl/pending`, `/hitl/review/{token}`) — approve as-is or adjust a parameter before approving, no external tool/license needed | ✅ Done |
-| 11 | Bedrock reasoning live against a real incident, PR auto-merged, cluster recovered — verified end to end. Demo video | ✅ core proven — 🎥 video pending |
+| 10b | Cookie-based console login (`/hitl/login`) — a normal browser login instead of a bearer header, so the console is usable from any machine, not just one with the API token in a terminal | ✅ Done |
+| 10c | Resolved-proposal history (`/hitl/history`) — the pending-queue view drops a proposal's cost the moment it's approved/rejected; this is the permanent record, cost included | ✅ Done |
+| 11 | Bedrock reasoning live against a real incident, PR auto-merged, cluster recovered — verified end to end. Demo video | ✅ Done — recorded 2026-08-14 |
 | 12 | Cost visibility — real per-decision cost captured from Bedrock's own token usage, shown in the console | ✅ minimal slice done — full budget-gate/dedup still backlog |
 
 **Deferred, revisit if time allows:** ChatOps (Slack) approvals (superseded by the review console — no external tool needed), FinOps cost estimate *of the fix itself* (distinct from Module 12's agent-cost tracking), multi-agent planner→critic→executor.
+
+## "Doesn't a canary/blue-green rollout already solve this?"
+
+Fair question, and the honest answer is: **partially, yes** — for the exact failure mode this demo shows (a freshly deployed image that's broken), a progressive-delivery tool like [Argo Rollouts](https://argo-rollouts.readthedocs.io/) or [Flagger](https://flagger.app/) with automated canary analysis would abort the rollout before it ever reaches 100% of traffic, faster than SAGA's ~3-minute detect-to-fix loop.
+
+The scope is different, though. Canary analysis only covers regressions introduced by the *last deploy* — it has nothing to say about an incident triggered by something else (a dependency going down, a slow memory leak surfacing days later, drift introduced outside the deploy pipeline). It also doesn't explain *why* — it aborts on a metric threshold, it doesn't produce a root-cause narrative, and it doesn't leave behind a policy that prevents the same failure from recurring. SAGA does both of those on top of the fix itself.
+
+In a real production setup, the honest architecture is **both**: canary/blue-green as the fast, cheap first line of defense against bad deploys specifically, and a reasoning agent like SAGA as the second line for everything a metric threshold can't catch on its own.
 
 Full module-by-module log, bugs found and fixed, and the live architecture map: `estado.md` / `infra-map.md` (private, `contexts-repo`).
 
