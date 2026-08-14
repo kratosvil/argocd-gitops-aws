@@ -81,6 +81,15 @@ spec:
                 - receiver: "null"
                   matchers:
                     - alertname = "Watchdog"
+                # InfoInhibitor es otra alarma sintetica del chart (existe
+                # solo para el mecanismo de inhibit_rules de arriba, marca
+                # namespaces con series "info" ausentes) -- mismo problema
+                # real encontrado 2026-08-13 durante la suite de fallos a
+                # proposito: paso por el webhook y costo Bedrock real sin
+                # ser un incidente.
+                - receiver: "null"
+                  matchers:
+                    - alertname = "InfoInhibitor"
             receivers:
               - name: "null"
               - name: webhook-dispatcher
