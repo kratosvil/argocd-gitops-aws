@@ -15,7 +15,13 @@ app = FastAPI(title="kratosvil-replica-app")
 # Estado en memoria del proceso -- se resetea en cada restart/deploy a
 # proposito, es un demo, no necesita persistencia.
 START_TIME = time.time()
-REQUEST_COUNTS: dict[str, int] = {}
+REQUEST_COUNTS: dict[tuple[str, str], int] = {}  # (path, status) -> count
+
+# Histograma de latencia, hecho a mano (mismo criterio "sin dependencias"
+# del resto del proyecto) -- buckets acumulativos como exige el formato de
+# Prometheus (le="X" cuenta todo <= X, no solo lo que cae justo en el rango).
+LATENCY_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+REQUEST_LATENCY: dict[str, dict] = {}  # path -> {buckets: [...], sum: float, count: int}
 
 # Metadata del pod via Downward API -- ver base/deployment.yaml. El tag de
 # imagen no se expone limpio como env var sin acoplar Kustomize al build
@@ -25,14 +31,30 @@ REQUEST_COUNTS: dict[str, int] = {}
 POD_NAME = os.getenv("POD_NAME", "unknown-pod")
 
 
-# Cuenta cada request por path -- alimenta tanto la pagina de estado como
-# /metrics, asi Grafana tiene algo real que graficar sin necesitar un
-# generador de carga aparte.
+# Cuenta cada request por path+status y mide latencia -- alimenta la pagina
+# de estado y /metrics con el metodo RED completo (antes solo Rate, faltaban
+# Errors y Duration).
 @app.middleware("http")
 async def count_requests(request: Request, call_next):
     path = request.url.path
-    REQUEST_COUNTS[path] = REQUEST_COUNTS.get(path, 0) + 1
-    return await call_next(request)
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start
+
+    status = str(response.status_code)
+    key = (path, status)
+    REQUEST_COUNTS[key] = REQUEST_COUNTS.get(key, 0) + 1
+
+    hist = REQUEST_LATENCY.setdefault(
+        path, {"buckets": [0] * len(LATENCY_BUCKETS), "sum": 0.0, "count": 0}
+    )
+    for i, bound in enumerate(LATENCY_BUCKETS):
+        if duration <= bound:
+            hist["buckets"][i] += 1
+    hist["sum"] += duration
+    hist["count"] += 1
+
+    return response
 
 
 @app.get("/health")
@@ -50,11 +72,26 @@ def metrics():
         "# HELP app_uptime_seconds Tiempo desde que arranco el proceso.",
         "# TYPE app_uptime_seconds gauge",
         f"app_uptime_seconds {uptime:.2f}",
-        "# HELP app_requests_total Requests recibidas por path.",
+        "# HELP app_requests_total Requests recibidas por path y codigo de estado.",
         "# TYPE app_requests_total counter",
     ]
-    for path, count in REQUEST_COUNTS.items():
-        lines.append(f'app_requests_total{{path="{path}"}} {count}')
+    for (path, status), count in REQUEST_COUNTS.items():
+        lines.append(f'app_requests_total{{path="{path}",status="{status}"}} {count}')
+
+    lines += [
+        "# HELP app_request_duration_seconds Latencia de requests por path.",
+        "# TYPE app_request_duration_seconds histogram",
+    ]
+    for path, hist in REQUEST_LATENCY.items():
+        for bound, cumulative in zip(LATENCY_BUCKETS, hist["buckets"]):
+            lines.append(
+                f'app_request_duration_seconds_bucket{{path="{path}",le="{bound}"}} {cumulative}'
+            )
+        lines.append(
+            f'app_request_duration_seconds_bucket{{path="{path}",le="+Inf"}} {hist["count"]}'
+        )
+        lines.append(f'app_request_duration_seconds_sum{{path="{path}"}} {hist["sum"]:.6f}')
+        lines.append(f'app_request_duration_seconds_count{{path="{path}"}} {hist["count"]}')
     return "\n".join(lines) + "\n"
 
 
