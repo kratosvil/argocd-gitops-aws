@@ -33,8 +33,11 @@ Build order for v1 — the minimal slice that demonstrates the real differentiat
 | 10c | Resolved-proposal history (`/hitl/history`) — the pending-queue view drops a proposal's cost the moment it's approved/rejected; this is the permanent record, cost included | ✅ Done |
 | 11 | Bedrock reasoning live against a real incident, PR auto-merged, cluster recovered — verified end to end. Demo video | ✅ Done — recorded 2026-08-14 |
 | 12 | Cost visibility — real per-decision cost captured from Bedrock's own token usage, shown in the console | ✅ minimal slice done — full budget-gate/dedup still backlog |
+| 13 | "SAGA — Overview" curated Grafana dashboard (cluster + app + incidents) + full RED method on the app (`app_requests_total` now carries `status`, added `app_request_duration_seconds` histogram) | ✅ Done — see `observability/manifests/dashboard-saga-overview.yaml` |
 
 **Deferred, revisit if time allows:** ChatOps (Slack) approvals (superseded by the review console — no external tool needed), FinOps cost estimate *of the fix itself* (distinct from Module 12's agent-cost tracking), multi-agent planner→critic→executor.
+
+**Timed cold redeploy (2026-08-18):** ~35.5 min end-to-end (VPC 40s, EKS+node group 11min — the bottleneck, ECR/IAM <10s, ArgoCD 1m25s, ALB Controller 47s, observability 28s, sao-platform stack ~6min, rest in verification/fixes). Not something to spin up 10 minutes before a live demo — budget for it.
 
 ## "Doesn't a canary/blue-green rollout already solve this?"
 
@@ -127,6 +130,15 @@ docker build -t <ecr-repo>:latest app/kratosvil-replica-app
 docker push <ecr-repo>:latest
 
 kubectl apply -f argocd/application-dev.yaml -f argocd/application-prod.yaml -f argocd/ingress.yaml
+
+# The ALB Controller creates the ALB at runtime -- Terraform doesn't track
+# it, so its DNS changes on every full redeploy. After alb-controller +
+# observability are applied, sync the hardcoded URLs (Grafana/Prometheus/
+# Alertmanager domains, Alertmanager webhook) instead of editing by hand:
+bash scripts/saga_sync_alb_urls.sh --apply
+
+# One-shot verification of the whole stack (infra, observability, app, IAM, console):
+bash scripts/saga_functional_check.sh
 ```
 
 Or via the run_script runner: `make run_script` (runs `_script.sh`, applies all 6 stacks and verifies nodes/pods).
