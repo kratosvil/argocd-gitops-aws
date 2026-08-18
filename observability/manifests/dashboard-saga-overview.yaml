@@ -121,17 +121,33 @@ data:
           "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 30 } }, "overrides": [] }
         },
 
-        { "id": 102, "type": "row", "title": "Incidentes (SAGA)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 } },
+        { "id": 103, "type": "row", "title": "App -- Errors + Duration (RED)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 } },
+        {
+          "id": 14, "type": "timeseries", "title": "Tasa de errores (5xx) por path",
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(rate(app_requests_total{status=~\"5..\"}[5m])) by (path) or vector(0)", "refId": "A", "legendFormat": "{{path}}" }],
+          "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.01 }] }, "custom": { "drawStyle": "line", "fillOpacity": 15 } }, "overrides": [] }
+        },
+        {
+          "id": 15, "type": "timeseries", "title": "Latencia p95 por path",
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(app_request_duration_seconds_bucket[5m])) by (le, path))", "refId": "A", "legendFormat": "{{path}}" }],
+          "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 15 } }, "overrides": [] }
+        },
+
+        { "id": 102, "type": "row", "title": "Incidentes (SAGA)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 } },
         {
           "id": 12, "type": "stat", "title": "SagaPodCrashLooping activo",
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 19 },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 26 },
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "targets": [{ "expr": "count(ALERTS{alertname=\"SagaPodCrashLooping\", alertstate=\"firing\"}) or vector(0)", "refId": "A" }],
           "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "mappings": [{ "type": "value", "options": { "0": { "text": "Sin incidentes" } } }] }, "overrides": [] }
         },
         {
           "id": 13, "type": "stat", "title": "Requests totales de la app",
-          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 19 },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 26 },
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "targets": [{ "expr": "sum(app_requests_total)", "refId": "A" }],
           "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "blue", "value": null }] } }, "overrides": [] }
