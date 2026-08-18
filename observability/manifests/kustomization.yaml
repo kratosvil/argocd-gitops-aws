@@ -6,3 +6,5 @@ resources:
   - ingress-grafana.yaml
   - ingress-prometheus.yaml
   - ingress-alertmanager.yaml
+  - dashboard-saga-overview.yaml
+  - servicemonitor-app.yaml

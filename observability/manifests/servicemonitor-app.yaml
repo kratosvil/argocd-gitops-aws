@@ -1,0 +1,27 @@
+# Sin esto, Prometheus nunca scrapea /metrics de la app -- el Service vive
+# en saga-gitops-manifests (privado) y no tenia el label release que el
+# selector del Prometheus CR exige (mismo criterio que las PrometheusRule
+# de este mismo directorio). Encontrado 2026-08-18 armando el dashboard
+# "SAGA -- Overview": los paneles de app_requests_total/app_uptime_seconds
+# quedaban vacios pese a que /metrics respondia bien via curl directo.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kratosvil-replica-app
+  namespace: observability
+  labels:
+    release: saga-observability-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - kratosvil-replica-app-dev
+  selector:
+    matchLabels:
+      app: kratosvil-replica-app
+  endpoints:
+    # El Service no tiene el puerto nombrado (solo port: 80, targetPort:
+    # 8080, sin "name") -- targetPort evita depender de un nombre que no
+    # existe, a diferencia de "port" que si lo requeriria.
+    - targetPort: 8080
+      path: /metrics
+      interval: 30s

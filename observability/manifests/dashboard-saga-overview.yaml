@@ -1,0 +1,140 @@
+# Dashboard curado de Grafana ("SAGA -- Overview"): estado del cluster,
+# CPU/memoria/estado por pod de la app que SAGA gestiona, y senal de
+# incidentes (restarts, alerta de crashloop). Reemplaza el flujo de
+# "navegar entre 24 dashboards genericos del chart" por un solo pane
+# enfocado para demo/uso diario.
+#
+# El sidecar de Grafana (grafana-sc-dashboard) detecta este ConfigMap por
+# el label grafana_dashboard y lo carga sin reiniciar el pod.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: saga-overview-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  saga-overview.json: |
+    {
+      "uid": "saga-overview",
+      "title": "SAGA -- Overview",
+      "tags": ["saga"],
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {},
+            "hide": 0
+          }
+        ]
+      },
+      "panels": [
+        { "id": 100, "type": "row", "title": "Cluster", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+        {
+          "id": 1, "type": "stat", "title": "Nodos Ready",
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"} == 1)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } }, "overrides": [] }
+        },
+        {
+          "id": 2, "type": "stat", "title": "Pods Running",
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "count(kube_pod_status_phase{phase=\"Running\"} == 1)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } }, "overrides": [] }
+        },
+        {
+          "id": 3, "type": "stat", "title": "Restarts (1h)",
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(increase(kube_pod_container_status_restarts_total[1h])) or vector(0)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] } }, "overrides": [] }
+        },
+        {
+          "id": 4, "type": "gauge", "title": "CPU del cluster (%)",
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "100 * sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m])) / sum(kube_node_status_allocatable{resource=\"cpu\"})", "refId": "A" }],
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 90 }] } }, "overrides": [] }
+        },
+        {
+          "id": 5, "type": "gauge", "title": "Memoria del cluster (%)",
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "100 * sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}) / sum(kube_node_status_allocatable{resource=\"memory\"})", "refId": "A" }],
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 90 }] } }, "overrides": [] }
+        },
+        {
+          "id": 6, "type": "stat", "title": "Uptime de la app",
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "max(app_uptime_seconds)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+        },
+
+        { "id": 101, "type": "row", "title": "App -- kratosvil-replica-app-dev", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
+        {
+          "id": 7, "type": "table", "title": "Estado de los pods",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [
+            { "expr": "kube_pod_status_phase{namespace=\"kratosvil-replica-app-dev\", phase=\"Running\"} == 1", "refId": "A", "format": "table", "instant": true },
+            { "expr": "kube_pod_container_status_restarts_total{namespace=\"kratosvil-replica-app-dev\"}", "refId": "B", "format": "table", "instant": true }
+          ],
+          "transformations": [
+            { "id": "merge", "options": {} },
+            { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "service": true, "uid": true, "namespace": true }, "renameByName": { "pod": "Pod", "phase": "Estado", "Value #A": "", "Value #B": "Restarts" } } }
+          ]
+        },
+        {
+          "id": 8, "type": "timeseries", "title": "CPU por pod",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kratosvil-replica-app-dev\",container!=\"\",container!=\"POD\"}[5m])) by (pod)", "refId": "A", "legendFormat": "{{pod}}" }],
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 15 } }, "overrides": [] }
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "Memoria por pod",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"kratosvil-replica-app-dev\",container!=\"\",container!=\"POD\"}) by (pod)", "refId": "A", "legendFormat": "{{pod}}" }],
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 15 } }, "overrides": [] }
+        },
+        {
+          "id": 10, "type": "timeseries", "title": "Requests por path",
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(rate(app_requests_total[5m])) by (path)", "refId": "A", "legendFormat": "{{path}}" }],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } }, "overrides": [] }
+        },
+        {
+          "id": 11, "type": "timeseries", "title": "Restarts por pod (tendencia)",
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"kratosvil-replica-app-dev\"}[5m])) by (pod)", "refId": "A", "legendFormat": "{{pod}}" }],
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 30 } }, "overrides": [] }
+        },
+
+        { "id": 102, "type": "row", "title": "Incidentes (SAGA)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 } },
+        {
+          "id": 12, "type": "stat", "title": "SagaPodCrashLooping activo",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "count(ALERTS{alertname=\"SagaPodCrashLooping\", alertstate=\"firing\"}) or vector(0)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "mappings": [{ "type": "value", "options": { "0": { "text": "Sin incidentes" } } }] }, "overrides": [] }
+        },
+        {
+          "id": 13, "type": "stat", "title": "Requests totales de la app",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 19 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(app_requests_total)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "blue", "value": null }] } }, "overrides": [] }
+        }
+      ]
+    }
