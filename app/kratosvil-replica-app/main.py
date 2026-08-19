@@ -26,8 +26,11 @@ REQUEST_LATENCY: dict[str, dict] = {}  # path -> {buckets: [...], sum: float, co
 
 # Historial acotado (timestamp, duracion) para las sparklines en vivo de "/"
 # -- deque con maxlen, memoria fija sin importar cuanto trafico reciba.
-RECENT_EVENTS: deque[tuple[float, float]] = deque(maxlen=2000)
-SPARKLINE_WINDOW_S = 30
+# Ventana subida de 30s a 90s (2026-08-19): con 30s, si alguien entra a la
+# pagina recien arrancado el pod, la sparkline se ve casi vacia -- 90s da
+# mas historia visible desde el primer refresh sin esperar tanto.
+RECENT_EVENTS: deque[tuple[float, float]] = deque(maxlen=4000)
+SPARKLINE_WINDOW_S = 90
 
 # Metadata del pod via Downward API -- ver base/deployment.yaml. El tag de
 # imagen no se expone limpio como env var sin acoplar Kustomize al build
@@ -146,7 +149,8 @@ def status_page():
     background: #0d1117; color: #c9d1d9;
     max-width: 640px; margin: 64px auto; padding: 0 20px;
   }}
-  .card {{ border: 1px solid #21262d; border-radius: 12px; padding: 28px 32px; background: #161b22; }}
+  .card {{ border: 1px solid #21262d; border-radius: 12px; padding: 28px 32px; background: #161b22; transition: border-color 0.3s ease; }}
+  .card.flash {{ border-color: #3fb950; }}
   .head {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }}
   h1 {{ font-size: 16px; font-weight: 600; margin: 0; color: #e6edf3; }}
   .live {{ font-size: 12px; color: #3fb950; display: flex; align-items: center; gap: 6px; }}
@@ -159,7 +163,7 @@ def status_page():
   .footer b {{ color: #c9d1d9; }}
 </style></head>
 <body>
-  <div class="card">
+  <div class="card" id="card">
     <div class="head">
       <h1>kratosvil-replica-app</h1>
       <span class="live"><span class="dot"></span>live</span>
@@ -199,6 +203,11 @@ function fmtUptime(s) {{
   return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
 }}
 
+// Pulso visual cuando llega trafico nuevo entre un poll y el siguiente --
+// mismo dato que ya se muestra (total_requests), sin permisos ni fuentes
+// nuevas. Marca real de actividad, no un efecto decorativo sin sentido.
+let lastTotal = null;
+
 async function refresh() {{
   try {{
     const res = await fetch("/stats");
@@ -208,6 +217,13 @@ async function refresh() {{
     document.getElementById("pod").textContent = d.pod;
     drawSparkline("rps-spark", d.requests_per_sec);
     drawSparkline("lat-spark", d.latency_ms);
+
+    if (lastTotal !== null && d.total_requests > lastTotal) {{
+      const card = document.getElementById("card");
+      card.classList.add("flash");
+      setTimeout(() => card.classList.remove("flash"), 400);
+    }}
+    lastTotal = d.total_requests;
   }} catch (e) {{ /* pagina sigue mostrando el ultimo valor conocido */ }}
 }}
 
