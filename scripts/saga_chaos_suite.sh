@@ -28,12 +28,14 @@ NS="kratosvil-replica-app-dev"
 DEPLOY="kratosvil-replica-app"
 HEAL_TIMEOUT=300   # 5min -- tiempo maximo para que el ciclo completo cierre
 POLL_INTERVAL=10
-# Tag bueno de referencia FIJO, no derivado de "lo que este corriendo ahora".
-# Bug real encontrado 2026-08-13: al usar SAGA_CHAOS_ONLY para re-correr
-# escenarios sueltos, un escenario anterior podia seguir roto -- capturar
-# good_tag desde el deploy en vivo heredaba esa rotura como "tag bueno",
-# haciendo que un self-heal real (a fastapi-v1) se reportara como FAIL.
-GOOD_TAG="fastapi-v1"
+# Tag bueno de referencia -- se captura UNA SOLA VEZ al arrancar main(), no
+# hardcodeado (se quedaba stale cada vez que se subia una imagen nueva --
+# paso real 2026-08-18 y 2026-08-19, bloqueaba la precondicion del primer
+# escenario) y no derivado por-escenario (bug real 2026-08-13: un escenario
+# anterior roto heredaba su propia rotura como "tag bueno" al re-correr
+# sueltos con SAGA_CHAOS_ONLY). Override manual disponible via SAGA_GOOD_TAG
+# si hiciera falta forzar un valor especifico.
+GOOD_TAG=""
 
 RESULTS=()
 
@@ -166,6 +168,19 @@ last_passed() {
 main() {
   echo "SAGA -- suite de fallos a proposito (3 causas raiz distintas)"
   echo "Costo estimado: ~\$0.01-0.02 por escenario en llamadas reales a Bedrock."
+
+  GOOD_TAG="${SAGA_GOOD_TAG:-}"
+  if [ -z "$GOOD_TAG" ]; then
+    local live_tag
+    live_tag="$(current_image_tag)"
+    if [[ "$live_tag" == chaos-* ]] || [ -z "$live_tag" ]; then
+      echo "No se pudo determinar un tag bueno de forma segura (deploy actual: '${live_tag:-vacio}', parece un tag de chaos o esta vacio)."
+      echo "Arreglar el deploy manualmente o pasar SAGA_GOOD_TAG=<tag> explicito."
+      exit 1
+    fi
+    GOOD_TAG="$live_tag"
+    echo "Tag bueno capturado del deploy en vivo: $GOOD_TAG"
+  fi
 
   local only="${SAGA_CHAOS_ONLY:-}"
   should_run() { [ -z "$only" ] || [[ " $only " == *" $1 "* ]]; }
