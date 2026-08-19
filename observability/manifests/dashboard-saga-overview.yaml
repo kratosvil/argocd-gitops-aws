@@ -151,6 +151,14 @@ data:
           "datasource": { "type": "prometheus", "uid": "$datasource" },
           "targets": [{ "expr": "sum(app_requests_total)", "refId": "A" }],
           "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "blue", "value": null }] } }, "overrides": [] }
+        },
+        {
+          "id": 16, "type": "stat", "title": "Incidentes detectados hoy (proxy: restarts 24h)",
+          "description": "No es un conteo directo de PRs mergeados por SAGA -- es la cantidad de reinicios de pod en las ultimas 24h, la misma condicion que dispara SagaPodCrashLooping. En este entorno de demo, todo restart es una prueba/incidente real, asi que es un proxy honesto sin necesitar un exportador nuevo desde S3/GitHub.",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 26 },
+          "datasource": { "type": "prometheus", "uid": "$datasource" },
+          "targets": [{ "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"kratosvil-replica-app-dev\"}[24h])) or vector(0)", "refId": "A" }],
+          "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "blue", "value": 1 }] } }, "overrides": [] }
         }
       ]
     }
